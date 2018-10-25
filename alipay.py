@@ -5,7 +5,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 from base64 import b64decode, b64encode
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse, parse_qs
 import urllib
 import asyncio
 import aiohttp
@@ -43,7 +43,8 @@ class LsAlipay:
     总结为：注册应用-获取密钥-参数配置-私钥签名-请求发送-返回值解析-返回值验签 -结果处理
            -------------------------------------------------- -返回值异步验签 - 结果处理
     """
-    def __init__(self, app_id, app_private_key='', alipay_public_key='', return_url='', app_notify_url='',
+    def __init__(self, app_id, app_private_key='', app_private_key_f='', alipay_public_key='',
+                 alipay_public_key_f='', return_url='', app_notify_url='',
                  version='1.0', charset='utf-8', sign_type='RSA2', debug=True):
         """
 
@@ -59,13 +60,13 @@ class LsAlipay:
         """
         # 配置公钥和私钥
         if not app_private_key:
-            with open(app_private_key) as fp:
+            with open(app_private_key_f) as fp:
                 self.app_private_key = RSA.importKey(fp.read())
         else:
             self.app_private_key = app_private_key
 
         if not alipay_public_key:
-            with open(alipay_public_key) as fp:
+            with open(alipay_public_key_f) as fp:
                 self.alipay_public_key = RSA.import_key(fp.read())
         else:
             self.alipay_public_key = alipay_public_key
@@ -253,7 +254,7 @@ class LsAlipay:
             except HTTPError:
                 continue
         loop.close()
-        if not response:
+        if response:
             temp_res = json.loads(response)
             result = temp_res[response_type]
             return result
@@ -279,13 +280,16 @@ class LsAlipay:
         return res_check
 
 
-def ls_alipay_api(app_id, method, app_private_key='', alipay_public_key='', return_url='', app_notify_url='',
+def ls_alipay_api(app_id, method, app_private_key='', app_private_key_f='', alipay_public_key='',
+                  alipay_public_key_f='', return_url='', app_notify_url='',
                   version='1.0', charset='utf-8', sign_type='RSA2', **kwargs):
     """
         :param app_id:
         :param method:
-        :param app_private_key:
-        :param alipay_public_key:
+        :param app_private_key: 私钥字符串 格式为前缀+ 内容 +后缀
+        :param alipay_public_key: 公钥字符串 格式为前缀+ 内容 +后缀
+        :param app_private_key_f: 私钥证书导入文件格式
+        :param alipay_public_key_f: 公钥证书导入文件格式
         :param return_url:
         :param app_notify_url:
         :param version:
@@ -298,7 +302,8 @@ def ls_alipay_api(app_id, method, app_private_key='', alipay_public_key='', retu
     if not app_id or not method:
         raise Exception('parameters error')
     response_type = method.replace('.', '_')+'_response'
-    ap = LsAlipay(app_id, app_private_key=app_private_key, alipay_public_key=alipay_public_key, return_url=return_url,
+    ap = LsAlipay(app_id, app_private_key_f=app_private_key_f, app_private_key=app_private_key,
+                  alipay_public_key=alipay_public_key, alipay_public_key_f=alipay_public_key_f, return_url=return_url,
                   app_notify_url=app_notify_url,
                   version=version, charset=charset, sign_type=sign_type)
 
@@ -328,7 +333,7 @@ def ls_alipay_api(app_id, method, app_private_key='', alipay_public_key='', retu
 
 if __name__ == '__main__':
     res = ls_alipay_api("2016092200567067", 'alipay.trade.fastpay.refund.query',
-                        app_private_key='./rsa_private_key.pem', alipay_public_key='./rsa_public_key.pem',
+                        app_private_key_f='./rsa_private_key.pem', alipay_public_key_f='./rsa_public_key.pem',
                         order_no="20180427000000001000000001")
 
     print(res)
